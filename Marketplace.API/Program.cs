@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -8,6 +8,17 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services
 builder.Services.AddControllers();
+
+// Add CORS 👇
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 
 // Add Database
 //builder.Services.AddDbContext<AppDbContext>(options =>
@@ -39,6 +50,7 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+app.UseCors("AllowAll");
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
