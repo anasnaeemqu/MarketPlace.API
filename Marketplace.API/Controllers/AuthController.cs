@@ -22,11 +22,15 @@ public class AuthController : ControllerBase
         _configuration = configuration;
     }
 
-    [Authorize]
+    //[Authorize]
+
     // REGISTER
     [HttpPost("register")]
     public IActionResult Register(User user)
     {
+        // Hash the password before saving 👇
+        user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+
         _context.Users.Add(user);
         _context.SaveChanges();
         return Ok(user);
@@ -37,15 +41,38 @@ public class AuthController : ControllerBase
     public IActionResult Login(LoginRequest request)
     {
         var existingUser = _context.Users
-            .FirstOrDefault(u => u.Email == request.Email && u.Password == request.Password);
+            .FirstOrDefault(u => u.Email == request.Email);
 
         if (existingUser == null)
             return Unauthorized("Invalid email or password");
 
-        var token = GenerateToken(existingUser);
+        // Verify password against hash 👇
+        bool isPasswordValid = BCrypt.Net.BCrypt.Verify(
+            request.Password,
+            existingUser.Password
+        );
 
+        if (!isPasswordValid)
+            return Unauthorized("Invalid email or password");
+
+        var token = GenerateToken(existingUser);
         return Ok(new { token });
     }
+
+    //// LOGIN
+    //[HttpPost("login")]
+    //public IActionResult Login(LoginRequest request)
+    //{
+    //    var existingUser = _context.Users
+    //        .FirstOrDefault(u => u.Email == request.Email && u.Password == request.Password);
+
+    //    if (existingUser == null)
+    //        return Unauthorized("Invalid email or password");
+
+    //    var token = GenerateToken(existingUser);
+
+    //    return Ok(new { token });
+    //}
 
     // TOKEN GENERATOR
     private string GenerateToken(User user)
