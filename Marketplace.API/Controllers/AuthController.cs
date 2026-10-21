@@ -28,35 +28,54 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public IActionResult Register(User user)
     {
-        // Hash the password before saving 👇
-        user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+        // Check if email already exists 
+        var existingUser = _context.Users
+            .FirstOrDefault(u => u.Email == user.Email);
 
+        if (existingUser != null)
+            return BadRequest("Email already registered");
+
+        // Check role is valid 
+        var validRoles = new[] { "Customer", "Vendor", "Admin" };
+        if (!validRoles.Contains(user.Role))
+            return BadRequest("Invalid role. Must be Customer, Vendor or Admin");
+
+        user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
         _context.Users.Add(user);
         _context.SaveChanges();
-        return Ok(user);
+
+        return Ok(new { message = "Registration successful", userId = user.Id });
     }
 
     // LOGIN
     [HttpPost("login")]
     public IActionResult Login(LoginRequest request)
     {
+        // Check if email exists 👇
         var existingUser = _context.Users
             .FirstOrDefault(u => u.Email == request.Email);
 
         if (existingUser == null)
-            return Unauthorized("Invalid email or password");
+            return Unauthorized("No account found with this email");
 
-        // Verify password against hash 👇
+        // Check password 👇
         bool isPasswordValid = BCrypt.Net.BCrypt.Verify(
             request.Password,
             existingUser.Password
         );
 
         if (!isPasswordValid)
-            return Unauthorized("Invalid email or password");
+            return Unauthorized("Incorrect password");
 
         var token = GenerateToken(existingUser);
-        return Ok(new { token });
+
+        return Ok(new
+        {
+            token,
+            userId = existingUser.Id,
+            name = existingUser.Name,
+            role = existingUser.Role
+        });
     }
 
     //// LOGIN
