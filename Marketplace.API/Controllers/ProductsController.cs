@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Marketplace.API.Infrastructure;
 using Marketplace.API.Domain;
+using System.Security.Claims;
 
 namespace Marketplace.API.Controllers;
 
@@ -16,7 +17,7 @@ public class ProductsController : ControllerBase
         _context = context;
     }
 
-    // GET ALL PRODUCTS (Everyone can see)
+    // GET ALL PRODUCTS — Everyone can see
     [HttpGet]
     public IActionResult GetAll()
     {
@@ -24,8 +25,8 @@ public class ProductsController : ControllerBase
         return Ok(products);
     }
 
-    // ADD PRODUCT (Only logged in users)
-    [Authorize]
+    // ADD PRODUCT — Only Vendors and Admins
+    [Authorize(Roles = "Vendor,Admin")]
     [HttpPost]
     public IActionResult AddProduct(Product product)
     {
@@ -34,8 +35,8 @@ public class ProductsController : ControllerBase
         return Ok(product);
     }
 
-    // UPDATE PRODUCT
-    [Authorize]
+    // UPDATE PRODUCT — Only Vendors and Admins
+    [Authorize(Roles = "Vendor,Admin")]
     [HttpPut("{id}")]
     public IActionResult UpdateProduct(int id, Product updated)
     {
@@ -53,8 +54,8 @@ public class ProductsController : ControllerBase
         return Ok(product);
     }
 
-    // DELETE PRODUCT
-    [Authorize]
+    // DELETE PRODUCT — Only Admins
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id}")]
     public IActionResult DeleteProduct(int id)
     {
