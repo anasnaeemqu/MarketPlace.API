@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Marketplace.API.Infrastructure;
 using Marketplace.API.Domain;
+using System.Security.Claims;
 
 namespace Marketplace.API.Controllers;
 
@@ -18,28 +19,36 @@ public class OrdersController : ControllerBase
         _context = context;
     }
 
-    // PLACE ORDER
+    // Helpers: read who is logged in from the token
+    private int CurrentUserId =>
+        int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+    private bool IsAdmin => User.IsInRole("Admin");
+
+    // PLACE ORDER, Customers and Admins only
+    [Authorize(Roles = "Customer,Admin")]
     [HttpPost]
     public IActionResult PlaceOrder(Order order)
     {
+        order.CustomerId = CurrentUserId;   // from the token, not from Flutter
         order.OrderDate = DateTime.UtcNow;
         order.Status = "Pending";
 
         _context.Orders.Add(order);
         _context.SaveChanges();
-
         return Ok(order);
     }
 
-    // GET ALL ORDERS
+    // GET ORDERS, you only see your own (Admin sees all)
     [HttpGet]
     public IActionResult GetAll()
     {
-        var orders = _context.Orders
-            .Include(o => o.Items)
-            .ToList();
+        var query = _context.Orders.Include(o => o.Items).AsQueryable();
 
-        return Ok(orders);
+        if (!IsAdmin)
+            query = query.Where(o => o.CustomerId == CurrentUserId);
+
+        return Ok(query.ToList());
     }
 
     // GET SINGLE ORDER
@@ -52,6 +61,9 @@ public class OrdersController : ControllerBase
 
         if (order == null)
             return NotFound("Order not found");
+
+        if (!IsAdmin && order.CustomerId != CurrentUserId)
+            return Forbid();
 
         return Ok(order);
     }

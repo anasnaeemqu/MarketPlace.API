@@ -26,10 +26,20 @@ public class ProductsController : ControllerBase
     }
 
     // ADD PRODUCT — Only Vendors and Admins
+    //[Authorize(Roles = "Vendor,Admin")]
+    //[HttpPost]
+    //public IActionResult AddProduct(Product product)
+    //{
+    //    _context.Products.Add(product);
+    //    _context.SaveChanges();
+    //    return Ok(product);
+    //}
+
     [Authorize(Roles = "Vendor,Admin")]
     [HttpPost]
     public IActionResult AddProduct(Product product)
     {
+        product.VendorId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value; // 👈
         _context.Products.Add(product);
         _context.SaveChanges();
         return Ok(product);
