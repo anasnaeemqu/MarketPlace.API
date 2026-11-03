@@ -5,7 +5,7 @@ using Marketplace.API.Infrastructure;
 using Marketplace.API.Domain;
 using System.Security.Claims;
 
-namespace Marketplace.API.Controllers;
+namespace Marketplace.API.Controllers; 
 
 [ApiController]
 [Route("api/[controller]")]
