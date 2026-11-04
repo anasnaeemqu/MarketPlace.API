@@ -38,7 +38,7 @@ public class AuthController : ControllerBase
         // Check role is valid 
         var validRoles = new[] { "Customer", "Vendor" };
         if (!validRoles.Contains(user.Role))
-            return BadRequest("Invalid role. Must be Customer, Vendor or Admin");
+            return BadRequest("Invalid role. Must be Customer or Vendor");
 
         user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
         _context.Users.Add(user);

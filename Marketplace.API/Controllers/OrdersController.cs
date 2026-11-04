@@ -40,6 +40,18 @@ public class OrdersController : ControllerBase
     }
 
     // GET ORDERS, you only see your own (Admin sees all)
+    //[HttpGet]
+    //public IActionResult GetAll()
+    //{
+    //    var query = _context.Orders.Include(o => o.Items).AsQueryable();
+
+    //    if (!IsAdmin)
+    //        query = query.Where(o => o.CustomerId == CurrentUserId);
+
+    //    return Ok(query.ToList());
+    //}
+
+    // GET ORDERS, you only see your own (Admin sees all)
     [HttpGet]
     public IActionResult GetAll()
     {
@@ -48,7 +60,42 @@ public class OrdersController : ControllerBase
         if (!IsAdmin)
             query = query.Where(o => o.CustomerId == CurrentUserId);
 
-        return Ok(query.ToList());
+        // newest first
+        var orders = query.ToList().OrderByDescending(o => o.OrderDate).ToList();
+
+        // 1. collect every product id used in these orders
+        var productIds = orders
+            .SelectMany(o => o.Items)
+            .Select(i => i.ProductId)
+            .Distinct()
+            .ToList();
+
+        // 2. look them all up in the catalog in ONE query: id -> name
+        var names = _context.Products
+            .Where(p => productIds.Contains(p.Id))
+            .ToDictionary(p => p.Id, p => p.Name);
+
+        // 3. write the name onto each item
+        var result = orders.Select(o => new
+        {
+            o.Id,
+            o.CustomerId,
+            o.OrderDate,
+            o.Status,
+            Items = o.Items.Select(i => new
+            {
+                i.Id,
+                i.OrderId,
+                i.ProductId,
+                ProductName = names.TryGetValue(i.ProductId, out var n)
+                    ? n
+                    : "Deleted product",   // product was deleted later
+                i.Quantity,
+                i.Price
+            })
+        });
+
+        return Ok(result);
     }
 
     // GET SINGLE ORDER
