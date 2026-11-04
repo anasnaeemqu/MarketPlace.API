@@ -36,7 +36,7 @@ public class AuthController : ControllerBase
             return BadRequest("Email already registered");
 
         // Check role is valid 
-        var validRoles = new[] { "Customer", "Vendor", "Admin" };
+        var validRoles = new[] { "Customer", "Vendor" };
         if (!validRoles.Contains(user.Role))
             return BadRequest("Invalid role. Must be Customer, Vendor or Admin");
 
