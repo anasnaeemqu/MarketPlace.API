@@ -26,19 +26,44 @@ public class OrdersController : ControllerBase
     private bool IsAdmin => User.IsInRole("Admin");
 
     // PLACE ORDER, Customers and Admins only
+ 
     [Authorize(Roles = "Customer,Admin")]
     [HttpPost]
     public IActionResult PlaceOrder(Order order)
     {
-        order.CustomerId = CurrentUserId;   // from the token, not from Flutter
+        if (order.Items == null || order.Items.Count == 0)
+            return BadRequest("Order must contain at least one item");
+
+        foreach (var item in order.Items)
+        {
+            if (item.Quantity <= 0)
+                return BadRequest("Quantity must be at least 1");
+
+            // Rule 1: look at the shelf
+            var product = _context.Products.FirstOrDefault(p => p.Id == item.ProductId);
+
+            if (product == null)
+                return BadRequest("Product not found");
+
+            // Rule 3: not enough? say no
+            if (product.Stock < item.Quantity)
+                return BadRequest($"Only {product.Stock} left of {product.Name}");
+
+            // Rule 2: sell it and take it off the shelf
+            product.Stock -= item.Quantity;
+
+            // Use the real price from the database, not the one Flutter sent
+            item.Price = product.Price;
+        }
+
+        order.CustomerId = CurrentUserId;
         order.OrderDate = DateTime.UtcNow;
         order.Status = "Pending";
 
         _context.Orders.Add(order);
-        _context.SaveChanges();
+        _context.SaveChanges();   // saves the order AND the lower stock together
         return Ok(order);
     }
-
     // GET ORDERS, you only see your own (Admin sees all)
     //[HttpGet]
     //public IActionResult GetAll()
