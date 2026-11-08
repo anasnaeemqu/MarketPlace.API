@@ -26,14 +26,6 @@ public class ProductsController : ControllerBase
     }
 
     // ADD PRODUCT — Only Vendors and Admins
-    //[Authorize(Roles = "Vendor,Admin")]
-    //[HttpPost]
-    //public IActionResult AddProduct(Product product)
-    //{
-    //    _context.Products.Add(product);
-    //    _context.SaveChanges();
-    //    return Ok(product);
-    //}
 
     [Authorize(Roles = "Vendor,Admin")]
     [HttpPost]
@@ -54,6 +46,12 @@ public class ProductsController : ControllerBase
 
         if (product == null)
             return NotFound("Product not found");
+
+        var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+
+        // Not the owner and not an Admin? Stop.
+        if (!User.IsInRole("Admin") && product.VendorId != currentUserId)
+            return Forbid();
 
         product.Name = updated.Name;
         product.Description = updated.Description;
@@ -77,5 +75,15 @@ public class ProductsController : ControllerBase
         _context.Products.Remove(product);
         _context.SaveChanges();
         return Ok("Product deleted");
+    }
+
+    // GET MY PRODUCTS, only the logged-in vendor's items
+    [Authorize(Roles = "Vendor,Admin")]
+    [HttpGet("mine")]
+    public IActionResult GetMine()
+    {
+        var me = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+        var products = _context.Products.Where(p => p.VendorId == me).ToList();
+        return Ok(products);
     }
 }

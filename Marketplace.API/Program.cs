@@ -3,8 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Marketplace.API.Infrastructure;
+//using Marketplace.API.Domain;
 
 var builder = WebApplication.CreateBuilder(args);
+
 
 // Add services
 builder.Services.AddControllers();
@@ -50,6 +52,24 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+
+//// TEMP: create an Admin account if it doesn't exist
+//using (var scope = app.Services.CreateScope())
+//{
+//    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+//    if (!db.Users.Any(u => u.Email == "admin@test.com"))
+//    {
+//        db.Users.Add(new User
+//        {
+//            Name = "Admin",
+//            Email = "admin@test.com",
+//            Password = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
+//            Role = "Admin"
+//        });
+//        db.SaveChanges();
+//    }
+//}
 
 app.UseCors("AllowAll");
 app.UseHttpsRedirection();
