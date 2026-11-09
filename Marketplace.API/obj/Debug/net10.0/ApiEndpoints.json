@@ -137,6 +137,16 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "Marketplace.API.Controllers.ProductsController",
+    "Method": "GetMine",
+    "RelativePath": "api/Products/mine",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "Marketplace.API.Controllers.WeatherForecastController",
     "Method": "Get",
     "RelativePath": "WeatherForecast",

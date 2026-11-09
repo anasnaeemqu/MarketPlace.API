@@ -63,14 +63,17 @@ public class ProductsController : ControllerBase
     }
 
     // DELETE PRODUCT — Only Admins
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Vendor,Admin")]
     [HttpDelete("{id}")]
     public IActionResult DeleteProduct(int id)
     {
         var product = _context.Products.FirstOrDefault(p => p.Id == id);
-
         if (product == null)
             return NotFound("Product not found");
+
+        var me = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+        if (!User.IsInRole("Admin") && product.VendorId != me)
+            return Forbid();
 
         _context.Products.Remove(product);
         _context.SaveChanges();
