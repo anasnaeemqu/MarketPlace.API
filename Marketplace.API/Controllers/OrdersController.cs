@@ -64,17 +64,6 @@ public class OrdersController : ControllerBase
         _context.SaveChanges();   // saves the order AND the lower stock together
         return Ok(order);
     }
-    // GET ORDERS, you only see your own (Admin sees all)
-    //[HttpGet]
-    //public IActionResult GetAll()
-    //{
-    //    var query = _context.Orders.Include(o => o.Items).AsQueryable();
-
-    //    if (!IsAdmin)
-    //        query = query.Where(o => o.CustomerId == CurrentUserId);
-
-    //    return Ok(query.ToList());
-    //}
 
     // GET ORDERS, you only see your own (Admin sees all)
     [HttpGet]
@@ -138,5 +127,63 @@ public class OrdersController : ControllerBase
             return Forbid();
 
         return Ok(order);
+    }
+
+    // UPDATE ORDER STATUS, Admin only, one step forward at a time
+    [Authorize(Roles = "Admin")]
+    [HttpPut("{id}/status")]
+    public IActionResult UpdateStatus(int id, UpdateStatusRequest request)
+    {
+        var order = _context.Orders.FirstOrDefault(o => o.Id == id);
+        if (order == null)
+            return NotFound("Order not found");
+
+        var steps = new[] { "Pending", "Shipped", "Delivered" };
+        var from = Array.IndexOf(steps, order.Status);
+        var to = Array.IndexOf(steps, request.Status);
+
+        if (to == -1)
+            return BadRequest("Status must be Pending, Shipped or Delivered");
+
+        if (from == -1)
+            return BadRequest($"Order is {order.Status} and cannot be changed");
+
+        if (to != from + 1)
+            return BadRequest($"Cannot move from {order.Status} to {request.Status}");
+
+        order.Status = request.Status;
+        _context.SaveChanges();
+        return Ok(new { order.Id, order.Status });
+    }
+
+    // CANCEL ORDER, owner (or Admin), Pending only, stock goes back
+    [Authorize(Roles = "Customer,Admin")]
+    [HttpPut("{id}/cancel")]
+    public IActionResult CancelOrder(int id)
+    {
+        var order = _context.Orders
+            .Include(o => o.Items)
+            .FirstOrDefault(o => o.Id == id);
+
+        if (order == null)
+            return NotFound("Order not found");
+
+        if (!IsAdmin && order.CustomerId != CurrentUserId)
+            return Forbid();
+
+        if (order.Status != "Pending")
+            return BadRequest($"Only Pending orders can be cancelled (this one is {order.Status})");
+
+        // put the items back on the shelf
+        foreach (var item in order.Items)
+        {
+            var product = _context.Products.FirstOrDefault(p => p.Id == item.ProductId);
+            if (product != null)
+                product.Stock += item.Quantity;
+        }
+
+        order.Status = "Cancelled";
+        _context.SaveChanges();   // status and stock saved together
+        return Ok(new { order.Id, order.Status });
     }
 }
