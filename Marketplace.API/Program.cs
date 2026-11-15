@@ -79,6 +79,7 @@ using (var scope = app.Services.CreateScope())
 //        db.SaveChanges();
 //    }
 //}
+// updated secret keys
 
 app.UseCors("AllowAll");
 app.UseHttpsRedirection();
