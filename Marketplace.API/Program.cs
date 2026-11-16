@@ -3,35 +3,31 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Marketplace.API.Infrastructure;
-//using Marketplace.API.Domain;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
-// Add services
 builder.Services.AddControllers();
 
-// Add CORS 👇
+// CORS: only your own app's address may call the API from a browser
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:Origins").Get<string[]>()
+    ?? new[] { "http://localhost:5000" };
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
-    {
-        policy.AllowAnyOrigin()
+    options.AddPolicy("AllowApp", policy =>
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyMethod()
-              .AllowAnyHeader();
-              //.AllowCredentials();
-    });
+              .AllowAnyHeader());
 });
 
-// Add Database
-//builder.Services.AddDbContext<AppDbContext>(options =>
-//    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Database (path can be overridden on a server)
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(
         builder.Configuration.GetConnectionString("DefaultConnection")
         ?? "Data Source=app.db"));
 
-// Add JWT Authentication
+// JWT: the secret key must come from user-secrets or an environment variable
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("Jwt:Key is not configured");
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
@@ -56,32 +52,14 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+// Create the database and tables automatically if they are missing
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();   // creates the file and tables if they're missing
+    db.Database.Migrate();
 }
 
-//// TEMP: create an Admin account if it doesn't exist
-//using (var scope = app.Services.CreateScope())
-//{
-//    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-//    if (!db.Users.Any(u => u.Email == "admin@test.com"))
-//    {
-//        db.Users.Add(new User
-//        {
-//            Name = "Admin",
-//            Email = "admin@test.com",
-//            Password = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
-//            Role = "Admin"
-//        });
-//        db.SaveChanges();
-//    }
-//}
-// updated secret keys
-
-app.UseCors("AllowAll");
+app.UseCors("AllowApp");
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
