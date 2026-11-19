@@ -8,4 +8,7 @@ public class Product
     public decimal Price { get; set; }
     public int Stock { get; set; }
     public string VendorId { get; set; }
+
+    // Optional link to a picture. The "?" means it may be empty.
+    public string? ImageUrl { get; set; }
 }
