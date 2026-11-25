@@ -1,8 +1,8 @@
 # Marketplace API
 
-The backend for a multi-vendor marketplace, built with **ASP.NET Core**, **Entity Framework Core** and **SQLite**. It handles accounts, role-based access, products and orders, and it is consumed by the [Marketplace App](https://github.com/YOUR-USERNAME/MarketPlace.App) (Flutter).
+The backend for a multi-vendor marketplace, built with **ASP.NET Core**, **Entity Framework Core** and **SQLite**. It handles accounts, role-based access, products and orders, and it is consumed by the [Marketplace App](https://github.com/anasnaeemqu/MarketPlace.App) (Flutter).
 
-> **Live demo:** _coming soon_ &nbsp;·&nbsp; **App screenshots:** see the [Marketplace App](https://github.com/YOUR-USERNAME/MarketPlace.App#screenshots) repository
+> **Live demo:** _coming soon_ &nbsp;·&nbsp; **App screenshots:** see the [Marketplace App](https://github.com/anasnaeemqu/MarketPlace.App#screenshots) repository
 
 ---
 
@@ -33,7 +33,7 @@ The backend for a multi-vendor marketplace, built with **ASP.NET Core**, **Entit
 **You need:** the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/MarketPlace.API.git
+git clone https://github.com/anasnaeemqu/MarketPlace.API.git
 cd MarketPlace.API/Marketplace.API      # the inner folder that contains the .csproj
 ```
 
