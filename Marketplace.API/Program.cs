@@ -22,11 +22,55 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader());
 });
 
-// Database (path can be overridden on a server)
+// Database: "Sqlite" on your laptop (default), "Postgres" online.
+// Chosen by the setting Database:Provider (environment variable Database__Provider).
+var dbProvider = builder.Configuration["Database:Provider"] ?? "Sqlite";
+var usePostgres = string.Equals(dbProvider, "Postgres", StringComparison.OrdinalIgnoreCase);
+
+if (!usePostgres && !string.Equals(dbProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
+    throw new InvalidOperationException(
+        $"Database:Provider must be 'Sqlite' or 'Postgres', but it is '{dbProvider}'.");
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// Render gives a URL like postgresql://user:pass@host:5432/dbname.
+// Npgsql wants "Host=...;Database=...;..." so we convert it when needed.
+static string ToNpgsqlConnectionString(string value)
+{
+    if (!value.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) &&
+        !value.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+        return value; // already in the keyword style
+
+    var uri = new Uri(value);
+    var userInfo = uri.UserInfo.Split(':', 2);
+
+    var csb = new Npgsql.NpgsqlConnectionStringBuilder
+    {
+        Host = uri.Host,
+        Port = uri.Port > 0 ? uri.Port : 5432,
+        Database = uri.AbsolutePath.TrimStart('/'),
+        Username = Uri.UnescapeDataString(userInfo[0]),
+        Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : null,
+        SslMode = Npgsql.SslMode.Prefer
+    };
+    return csb.ConnectionString;
+}
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(
-        builder.Configuration.GetConnectionString("DefaultConnection")
-        ?? "Data Source=app.db"));
+{
+    if (usePostgres)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+            throw new InvalidOperationException(
+                "ConnectionStrings:DefaultConnection is required when Database:Provider is Postgres.");
+
+        options.UseNpgsql(ToNpgsqlConnectionString(connectionString));
+    }
+    else
+    {
+        options.UseSqlite(connectionString ?? "Data Source=app.db");
+    }
+});
 
 // JWT: the secret key must come from user-secrets or an environment variable
 var jwtKey = builder.Configuration["Jwt:Key"]
@@ -53,11 +97,23 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+app.Logger.LogInformation("Database provider: {Provider}", usePostgres ? "Postgres" : "Sqlite");
+
 // Create the database and tables automatically if they are missing
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
+
+    if (usePostgres)
+    {
+        // The SQLite migration files do not work on Postgres,
+        // so online the tables are built straight from the models.
+        db.Database.EnsureCreated();
+    }
+    else
+    {
+        db.Database.Migrate();
+    }
 
     // First Admin: created from secret settings, only if no Admin exists yet
     var adminEmail = builder.Configuration["Admin:Email"];
